@@ -44,7 +44,7 @@ int built_in(char **token, list_t *env, int num, char **command)
 		_setenv(&env, token);
 		i = 1;
 	}
-	/* if user types "unsetenv", remove linked list node */
+	/* if user types "setenv", remove linked list node */
 	else if (_strcmp(token[0], "unsetenv") == 0)
 	{
 		_unsetenv(&env, token);
@@ -73,7 +73,7 @@ char *ignore_space(char *str)
  */
 void ctrl_D(int i, char *command, list_t *env)
 {
-	if (i == -1) /* handles Ctrl+D */
+	if (i == 0) /* handles Ctrl+D */
 	{
 		free(command); /* exit with newline if in shell */
 		free_linked_list(env);
@@ -91,8 +91,7 @@ void ctrl_D(int i, char *command, list_t *env)
 int prompt(char **en)
 {
 	list_t *env;
-	ssize_t i = 0;
-	size_t n = 0, size = 0;
+	size_t i = 0, n = 0;
 	int command_line_no = 0, exit_stat = 0;
 	char *command, *n_command, **token;
 
@@ -103,10 +102,9 @@ int prompt(char **en)
 			write(STDOUT_FILENO, "$ ", 2);
 		else
 			non_interactive(env);
-		/*signal(SIGINT, ctrl_c);  makes ctrl+c not work */
-		command = NULL;
-		i = 0; /* reset vars each time loop runs */
-		i = _getline(&command, &size, stdin); /* read user's cmd in stdin */
+		signal(SIGINT, ctrl_c); /* makes ctrl+c not work */
+		command = NULL; i = 0; /* reset vars each time loop runs */
+		i = get_line(&command); /* read user's cmd in stdin */
 		ctrl_D(i, command, env); /* exits shell if ctrl-D */
 		n_command = command;
 		command = ignore_space(command);
@@ -116,11 +114,9 @@ int prompt(char **en)
 		command[n] = '\0';
 		if (command[0] == '\0') /* reprompt if user hits enter only */
 		{
-			free(n_command);
-			continue;
+			free(n_command); continue;
 		}
-		token = NULL;
-		token = _str_tok(command, " "); /*token user cmd*/
+		token = NULL; token = _str_tok(command, " "); /*token user cmd*/
 		if (n_command != NULL)
 			free(n_command);
 		exit_stat = built_in(token, env, command_line_no, NULL);
@@ -128,6 +124,5 @@ int prompt(char **en)
 			continue;
 		exit_stat = _execve(token, env, command_line_no);
 	} while (1); /* keep on repeating till user exits shell */
-	printf("AM I UNREACHABLE??.. Sure you are\n");
 	return (exit_stat);
 }
