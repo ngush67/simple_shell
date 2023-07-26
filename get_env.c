@@ -1,60 +1,139 @@
+/*
+ * File: env_builtins.c
+ * Auth: Ngula
+ *       Grace
+ */
+
 #include "shell.h"
 
+int shellby_env(char **args, char __attribute__((__unused__)) **front);
+int shellby_setenv(char **args, char __attribute__((__unused__)) **front);
+int shellby_unsetenv(char **args, char __attribute__((__unused__)) **front);
+
 /**
- * c_strdup - custom string duplication; excludes beginning bytes
- * @str: string to duplicate (e.g. environmental variable PATH=/bin:/bin/ls)
- * @cs: number of bytes to exclude (e.g. excludes "PATH=")
- * Return: string (e.g. /bin:/bin/ls)
+ * shellby_env - Prints the current environment.
+ * @args: An array of arguments passed to the shell.
+ * @front: A double pointer to the beginning of args.
+ *
+ * Return: If an error occurs - -1.
+ *	   Otherwise - 0.
+ *
+ * Description: Prints one variable per line in the
+ *              format 'variable'='value'.
  */
-char *c_strdup(char *str, int cs)
+int shellby_env(char **args, char __attribute__((__unused__)) **front)
 {
-	char *duplicate_str;
-	int i, len = 0;
+	int index;
+	char nc = '\n';
 
-	if (str == NULL) /* validate str input */
-		return (NULL);
+	if (!environ)
+		return (-1);
 
-	/* calculate len + null terminator to malloc */
-	while (*(str + len))
-		len++;
-	len++;
-
-	/* allocate memory but exclude environmental variable title (PATH) */
-	duplicate_str = malloc(sizeof(char) * (len - cs));
-	if (duplicate_str == NULL)
-		return (NULL);
-
-	i = 0;
-	while (i < (len - cs))
+	for (index = 0; environ[index]; index++)
 	{
-		*(duplicate_str + i) = *(str + cs + i);
-		i++;
+		write(STDOUT_FILENO, environ[index], _strlen(environ[index]));
+		write(STDOUT_FILENO, &nc, 1);
 	}
-	return (duplicate_str);
+
+	(void)args;
+	return (0);
 }
 
 /**
- * get_env - finds and returns a copy of the requested environmental variable
- * @str: string to store it in
- * @env: entire set of environmental variables
- * Return: copy of requested environmental variable
+ * shellby_setenv - Changes or adds an environmental variable to the PATH.
+ * @args: An array of arguments passed to the shell.
+ * @front: A double pointer to the beginning of args.
+ * Description: args[1] is the name of the new or existing PATH variable.
+ *              args[2] is the value to set the new or changed variable to.
+ *
+ * Return: If an error occurs - -1.
+ *         Otherwise - 0.
  */
-char *get_env(char *str, list_t *env)
+int shellby_setenv(char **args, char __attribute__((__unused__)) **front)
 {
-	int j = 0, cs = 0;
+	char **env_var = NULL, **new_environ, *new_value;
+	size_t size;
+	int index;
 
-	while (env != NULL)
+	if (!args[0] || !args[1])
+		return (create_error(args, -1));
+
+	new_value = malloc(_strlen(args[0]) + 1 + _strlen(args[1]) + 1);
+	if (!new_value)
+		return (create_error(args, -1));
+	_strcpy(new_value, args[0]);
+	_strcat(new_value, "=");
+	_strcat(new_value, args[1]);
+
+	env_var = _getenv(args[0]);
+	if (env_var)
 	{
-		j = 0;
-		while ((env->var)[j] == str[j]) /* find desired env variable */
-			j++;
-		if (str[j] == '\0' && (env->var)[j] == '=')
-			break;
-		env = env->next;
+		free(*env_var);
+		*env_var = new_value;
+		return (0);
+	}
+	for (size = 0; environ[size]; size++)
+		;
+
+	new_environ = malloc(sizeof(char *) * (size + 2));
+	if (!new_environ)
+	{
+		free(new_value);
+		return (create_error(args, -1));
 	}
 
-	while (str[cs] != '\0') /* find how many bytes in env variable title */
-		cs++;
-	cs++; /*counts 1 more for = sign*/
-	return (c_strdup(env->var, cs)); /* make a copy of variable w/o title */
+	for (index = 0; environ[index]; index++)
+		new_environ[index] = environ[index];
+
+	free(environ);
+	environ = new_environ;
+	environ[index] = new_value;
+	environ[index + 1] = NULL;
+
+	return (0);
+}
+
+/**
+ * shellby_unsetenv - Deletes an environmental variable from the PATH.
+ * @args: An array of arguments passed to the shell.
+ * @front: A double pointer to the beginning of args.
+ * Description: args[1] is the PATH variable to remove.
+ *
+ * Return: If an error occurs - -1.
+ *         Otherwise - 0.
+ */
+int shellby_unsetenv(char **args, char __attribute__((__unused__)) **front)
+{
+	char **env_var, **new_environ;
+	size_t size;
+	int index, index2;
+
+	if (!args[0])
+		return (create_error(args, -1));
+	env_var = _getenv(args[0]);
+	if (!env_var)
+		return (0);
+
+	for (size = 0; environ[size]; size++)
+		;
+
+	new_environ = malloc(sizeof(char *) * size);
+	if (!new_environ)
+		return (create_error(args, -1));
+
+	for (index = 0, index2 = 0; environ[index]; index++)
+	{
+		if (*env_var == environ[index])
+		{
+			free(*env_var);
+			continue;
+		}
+		new_environ[index2] = environ[index];
+		index2++;
+	}
+	free(environ);
+	environ = new_environ;
+	environ[size - 1] = NULL;
+
+	return (0);
 }
