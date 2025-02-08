@@ -1,5 +1,5 @@
 #include "shell.h"
-
+ 
 /**
  * c_strcat - concatenate two strings ignoring the first character ("~" in cd)
  * @dest: string to be appended to
