@@ -1,5 +1,5 @@
 #include "shell.h"
-
+ 
 /**
  * c_atoi - custom atoi converts string to int
  * @s: string
