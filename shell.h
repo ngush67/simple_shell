@@ -1,5 +1,5 @@
 #ifndef SHELL
-#define SHELL
+#define SHELL 
 
 #include <stdlib.h>
 #include <stdio.h>
